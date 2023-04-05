@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic+Coding&display=swap" rel="stylesheet">
+
+  <title>MGS Codec</title>
+
+  <style>
+    /* Add your CSS styles here */
+    .codec-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      z-index: 1000;
+    }
+
+    .codec-content {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90%;
+      max-width: 800px;
+      background-color: #000;
+      padding: 20px;
+      border: 2px solid #b3ffe7;
+      font-family: 'Nanum Gothic Coding', monospace;
+      font-size: 24px;
+      color: #00ff88;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 0 10px #00ffae;
+      overflow: hidden;
+      z-index: 1100;
+    }
+
+    .scanlines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: repeating-linear-gradient(to bottom,
+          rgba(0, 0, 0, 0.15),
+          rgba(0, 0, 0, 0.15) 1px,
+          transparent 1px,
+          transparent 2px);
+      pointer-events: none;
+      z-index: 1300;
+    }
+
+    .avatars {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    #codec-avatar {
+      max-width: 100%;
+      height: auto;
+      margin-bottom: 10px;
+    }
+
+    #shopper-avatar,
+    #snake-avatar {
+      max-width: 48%;
+      height: auto;
+      margin-bottom: 10px;
+    }
+
+    .chat-container {
+      height: 50vh;
+      max-height: 300px;
+      overflow-y: auto;
+      padding: 20px;
+      margin-bottom: 10px;
+      line-height: 1.4;
+      /* Increase this value to increase line spacing */
+    }
+
+    .close-codec {
+      display: block;
+      margin: 10px auto;
+      background-color: #00ffae;
+      border: none;
+      color: #003300;
+      padding: 5px 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    /* Responsive styles for smaller screens */
+    @media screen and (max-width: 480px) {
+      .codec-content {
+        font-size: 18px;
+      }
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0;
+      }
+    }
+
+    .chat-container::after {
+      content: '|';
+      animation: blink 1s step-end infinite;
+    }
+
+    @keyframes noise {
+
+      0%,
+      100% {
+        opacity: 0.02;
+      }
+
+      50% {
+        opacity: 0.04;
+      }
+    }
+
+    .noise {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzIiBoZWlnaHQ9IjMiIHZpZXdCb3g9IjAgMCAzIDMiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IndoaXRlIiAvPjxjaXJjbGUgY3g9IjEiIGN5PSIxIiByPSIxIiBmaWxsPSJibGFjayIgLz48Y2lyY2xlIGN4PSIyIiBjeT0iMiIgcj0iMSIgZmlsbD0iYmxhY2siIC8+PGNpcmNsZSBjeD0iMSIgY3k9IjMiIHI9IjEiIGZpbGw9ImJsYWNrIiAvPjwvc3ZnPgo=');
+      opacity: 0.02;
+      animation: noise 1s linear infinite;
+      pointer-events: none;
+      z-index: 1200;
+    }
+
+    body {
+      padding: 20px;
+    }
+
+    body>button {
+      font-size: 24px;
+      width: 90%;
+      display: block;
+      margin: 30px auto;
+      padding: 10px 20px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Add your HTML markup here -->
+  <!-- Sample buttons to trigger Codec modal -->
+  <button id="trigger-codec-1">Open Codec with Conversation 1</button>
+  <button id="trigger-codec-2">Open Codec with Conversation 2</button>
+  <button id="trigger-codec-3">Open Codec with Conversation 3</button>
+  <button id="reset-codec">Reset Codec</button>
+  <button id="switch-message">Switch Message</button>
+
+  <div id="codec-modal" class="codec-modal">
+    <div class="codec-content">
+      <div class="noise"></div>
+      <div class="scanlines"></div>
+      <div class="avatars">
+        <img id="codec-avatar" src="mgs-avatar.png" alt="MGS Avatar">
+      </div>
+      <div class="chat-container">
+        <!-- Chat lines will be dynamically generated here -->
+      </div>
+      <button id="close-codec" class="close-codec">Close</button>
+    </div>
+  </div>
+
+
+
+  <div id="video-container"
+    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:2000; background-color: black;">
+    <video id="local-video" width="100%" height="100%">
+      <source src="mgs-codec-call.mp4" type="video/mp4">
+      Your browser does not support the video tag.
+    </video>
+  </div>
+
+
+  <script>
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const conversations = {
+        "conversations": [
+          {
+            "id": 1,
+            "lines": [
+              {
+                "speaker": "shopper",
+                "text": "Hey, is this a vintage store?"
+              },
+              {
+                "speaker": "snake",
+                "text": "Yeah, it's a place where the past comes back to life. Just like Shadow Moses Island."
+              },
+              {
+                "speaker": "shopper",
+                "text": "Wow, I didn't expect to find you here, Snake!"
+              },
+              {
+                "speaker": "snake",
+                "text": "I'm always around when there's something valuable to protect."
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "lines": [
+              {
+                "speaker": "shopper",
+                "text": "Snake, I found this amazing mid-century modern chair! What do you think?"
+              },
+              {
+                "speaker": "snake",
+                "text": "Nice find! It's a perfect blend of form and function. Sometimes, even a soldier needs a place to rest."
+              },
+              {
+                "speaker": "shopper",
+                "text": "Thanks, Snake! I'll take it!"
+              },
+              {
+                "speaker": "snake",
+                "text": "Remember, a good soldier knows how to adapt to their environment."
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "lines": [
+              {
+                "speaker": "shopper",
+                "text": "Do you have any advice for finding the best vintage items, Snake?"
+              },
+              {
+                "speaker": "snake",
+                "text": "Stay low, move slowly, and keep your eyes open. You never know what treasures you might find."
+              },
+              {
+                "speaker": "shopper",
+                "text": "Sounds like a plan! Thanks for the tips, Snake!"
+              },
+              {
+                "speaker": "snake",
+                "text": "No problem. Just remember, it's not about the items you find, but the memories they hold."
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "lines": [
+              {
+                "speaker": "shopper",
+                "text": "Snake, I just discovered some old records and rare jewelry! This place is incredible!"
+              },
+              {
+                "speaker": "snake",
+                "text": "Each piece has its own story. From gold and silver to diamonds, these items have survived the test of time."
+              },
+              {
+                "speaker": "shopper",
+                "text": "You're right, Snake. It's fascinating to imagine the history behind these items."
+              },
+              {
+                "speaker": "snake",
+                "text": "That's the beauty of vintage. Embrace the past, and it'll teach you something about the present."
+              }
+            ]
+          }
+        ]
+      };
+
+      const chatContainer = document.querySelector('.chat-container');
+      const closeCodec = document.getElementById('close-codec');
+      let codecOpen = false;
+
+      // Function to display a conversation by ID
+      function showConversation(id) {
+        const conversation = conversations.conversations.find(conv => conv.id === id);
+        let lineIndex = 0;
+
+        function typeLine() {
+          if (!codecOpen) return;
+
+          const line = conversation.lines[lineIndex];
+          let charIndex = 0;
+
+          chatContainer.innerHTML += line.speaker.toUpperCase() + ': ';
+
+          function typeCharacter() {
+            if (!codecOpen) return;
+
+            chatContainer.innerHTML += line.text[charIndex];
+            charIndex++;
+
+            if (charIndex < line.text.length) {
+              setTimeout(typeCharacter, 50);
+            } else {
+              chatContainer.innerHTML += '<br><br>';
+              lineIndex++;
+
+              if (lineIndex < conversation.lines.length) {
+                setTimeout(typeLine, 500);
+              }
+            }
+          }
+          typeCharacter();
+        }
+
+        typeLine();
+      }
+
+      // Function to open the Codec modal and display a conversation
+      function openCodec(id) {
+        document.getElementById('codec-modal').style.display = 'block';
+        codecOpen = true;
+        chatContainer.innerHTML = '';
+        showConversation(id);
+      }
+
+      // Function to close the Codec modal
+      function closeCodecModal() {
+        document.getElementById('codec-modal').style.display = 'none';
+        codecOpen = false;
+      }
+
+      // Event listener for closing the Codec modal
+      closeCodec.addEventListener('click', closeCodecModal);
+
+      // Event listener for resetting the Codec modal
+      document.getElementById('reset-codec').addEventListener('click', function () {
+        closeCodecModal();
+        chatContainer.innerHTML = '';
+      });
+
+      // Function to show local video
+      function showLocalVideo() {
+        const videoContainer = document.getElementById('video-container');
+        const localVideo = document.getElementById('local-video');
+
+        videoContainer.style.display = 'block';
+        localVideo.play();
+
+        localVideo.addEventListener('ended', function () {
+          videoContainer.style.display = 'none';
+          openCodec(currentConversationId);
+        }, { once: true });
+      }
+
+      // Modify event listeners to play local video before opening the codec modal
+      document.getElementById('trigger-codec-1').addEventListener('click', function () {
+        currentConversationId = 1;
+        showLocalVideo();
+      });
+
+      document.getElementById('trigger-codec-2').addEventListener('click', function () {
+        currentConversationId = 2;
+        showLocalVideo();
+      });
+
+      document.getElementById('trigger-codec-3').addEventListener('click', function () {
+        currentConversationId = 3;
+        showLocalVideo();
+      });
+
+      document.getElementById('switch-message').addEventListener('click', function () {
+        currentConversationId++;
+        if (currentConversationId > conversations.conversations.length) {
+          currentConversationId = 1;
+        }
+        showLocalVideo();
+      });
+
+
+
+    });
+  </script>
+
+</body>
+
+</html>
